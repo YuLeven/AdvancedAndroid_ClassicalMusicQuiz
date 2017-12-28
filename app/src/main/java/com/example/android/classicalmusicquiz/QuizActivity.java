@@ -169,11 +169,11 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
      * Disables the buttons and changes the background colors to show the correct answer.
      */
     private void showCorrectAnswer() {
+
         for (int i = 0; i < mQuestionSampleIDs.size(); i++) {
             int buttonSampleID = mQuestionSampleIDs.get(i);
 
             mButtons[i].setEnabled(false);
-            mPlayerView.setDefaultArtwork(Sample.getComposerArtBySampleID(this, mAnswerSampleID));
 
             if (buttonSampleID == mAnswerSampleID) {
                 mButtons[i].getBackground().setColorFilter(ContextCompat.getColor
@@ -188,6 +188,9 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
 
             }
         }
+
+        // Sets the artwork for the picture of the correct artist
+        mPlayerView.setDefaultArtwork(Sample.getComposerArtBySampleID(this, mAnswerSampleID));
     }
 
     /**

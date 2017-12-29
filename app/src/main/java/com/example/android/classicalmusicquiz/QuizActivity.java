@@ -25,18 +25,24 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
 import com.google.android.exoplayer2.DefaultLoadControl;
+import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.ExoPlayerFactory;
 import com.google.android.exoplayer2.LoadControl;
 import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.Timeline;
 import com.google.android.exoplayer2.extractor.DefaultExtractorsFactory;
 import com.google.android.exoplayer2.source.ExtractorMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
+import com.google.android.exoplayer2.source.TrackGroupArray;
 import com.google.android.exoplayer2.trackselection.DefaultTrackSelector;
+import com.google.android.exoplayer2.trackselection.TrackSelectionArray;
 import com.google.android.exoplayer2.trackselection.TrackSelector;
 import com.google.android.exoplayer2.ui.SimpleExoPlayerView;
 import com.google.android.exoplayer2.upstream.DefaultDataSourceFactory;
@@ -44,10 +50,12 @@ import com.google.android.exoplayer2.util.Util;
 
 import java.util.ArrayList;
 
-public class QuizActivity extends AppCompatActivity implements View.OnClickListener {
+public class QuizActivity extends AppCompatActivity implements View.OnClickListener, ExoPlayer.EventListener {
 
     private static final int CORRECT_ANSWER_DELAY_MILLIS = 1000;
     private static final String REMAINING_SONGS_KEY = "remaining_songs";
+    private static final String LOG_TAG = QuizActivity.class.getCanonicalName();
+
     private int[] mButtonIDs = {R.id.buttonA, R.id.buttonB, R.id.buttonC, R.id.buttonD};
     private ArrayList<Integer> mRemainingSampleIDs;
     private ArrayList<Integer> mQuestionSampleIDs;
@@ -71,6 +79,31 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
         beginGame();
     }
 
+    @Override
+    public void onTimelineChanged(Timeline timeline, Object manifest) {}
+
+    @Override
+    public void onPlayerError(ExoPlaybackException error) {}
+
+    @Override
+    public void onTracksChanged(TrackGroupArray trackGroups, TrackSelectionArray trackSelections) {}
+
+    @Override
+    public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
+        if ((playbackState == ExoPlayer.STATE_READY) && playWhenReady) {
+            Log.d(LOG_TAG, "Playing");
+        } else if ((playbackState == ExoPlayer.STATE_READY)) {
+            Log.d(LOG_TAG, "Stopped");
+        }
+
+    }
+
+    @Override
+    public void onLoadingChanged(boolean isLoading) {}
+
+    @Override
+    public void onPositionDiscontinuity() {}
+
     /**
      * Called when the activity is about to be destroyed
      */
@@ -78,36 +111,6 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
     protected void onDestroy() {
         super.onDestroy();
         releasePlayer();
-    }
-
-    /**
-     * Releases the ExoPlayer
-     */
-    private void releasePlayer() {
-        mExoPlayer.stop();
-        mExoPlayer.release();
-        mExoPlayer = null;
-    }
-
-    /**
-     * Initializes the button to the correct views, and sets the text to the composers names,
-     * and set's the OnClick listener to the buttons.
-     *
-     * @param answerSampleIDs The IDs of the possible answers to the question.
-     * @return The Array of initialized buttons.
-     */
-    private Button[] initializeButtons(ArrayList<Integer> answerSampleIDs) {
-        Button[] buttons = new Button[mButtonIDs.length];
-        for (int i = 0; i < answerSampleIDs.size(); i++) {
-            Button currentButton = (Button) findViewById(mButtonIDs[i]);
-            Sample currentSample = Sample.getSampleByID(this, answerSampleIDs.get(i));
-            buttons[i] = currentButton;
-            currentButton.setOnClickListener(this);
-            if (currentSample != null) {
-                currentButton.setText(currentSample.getComposer());
-            }
-        }
-        return buttons;
     }
 
 
@@ -163,6 +166,36 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
             }
         }, CORRECT_ANSWER_DELAY_MILLIS);
 
+    }
+
+    /**
+     * Releases the ExoPlayer
+     */
+    private void releasePlayer() {
+        mExoPlayer.stop();
+        mExoPlayer.release();
+        mExoPlayer = null;
+    }
+
+    /**
+     * Initializes the button to the correct views, and sets the text to the composers names,
+     * and set's the OnClick listener to the buttons.
+     *
+     * @param answerSampleIDs The IDs of the possible answers to the question.
+     * @return The Array of initialized buttons.
+     */
+    private Button[] initializeButtons(ArrayList<Integer> answerSampleIDs) {
+        Button[] buttons = new Button[mButtonIDs.length];
+        for (int i = 0; i < answerSampleIDs.size(); i++) {
+            Button currentButton = (Button) findViewById(mButtonIDs[i]);
+            Sample currentSample = Sample.getSampleByID(this, answerSampleIDs.get(i));
+            buttons[i] = currentButton;
+            currentButton.setOnClickListener(this);
+            if (currentSample != null) {
+                currentButton.setText(currentSample.getComposer());
+            }
+        }
+        return buttons;
     }
 
     /**
@@ -263,6 +296,7 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
             TrackSelector trackSelector = new DefaultTrackSelector();
             LoadControl loadControl = new DefaultLoadControl();
             mExoPlayer = ExoPlayerFactory.newSimpleInstance(this, trackSelector, loadControl);
+            mExoPlayer.addListener(this);
             mPlayerView.setPlayer(mExoPlayer);
 
             // Prepare the media source
